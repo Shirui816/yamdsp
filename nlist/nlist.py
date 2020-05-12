@@ -208,7 +208,7 @@ class nlist(object):
             self.neighbour_list()
             self.update_counts += 1
 
-    def vis(self):
+    def show(self):
         cell_list = self.d_cell_list.copy_to_host()
         cell_map = self.d_cell_map.copy_to_host()
         cell_counts = self.d_cell_counts.copy_to_host()
