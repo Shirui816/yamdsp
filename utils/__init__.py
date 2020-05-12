@@ -13,6 +13,16 @@ def cu_pbc_dist(a, b, box):
     return sqrt(ret)
 
 
+@cuda.jit("float64(float64[:], float64[:], float64[:], float64, float64)", device=True)
+def cu_pbc_dist_diameter(a, b, box, da, db):
+    ret = 0
+    for i in range(a.shape[0]):
+        d = a[i] - b[i]
+        d -= box[i] * floor(d / box[i] + 0.5)
+        ret += d ** 2
+    return sqrt(ret) - ((da + db) / 2 - 1)
+
+
 @cuda.jit("float64(float64[:], float64[:], float64[:])", device=True)
 def cu_pbc_dist2(a, b, box):
     ret = 0
