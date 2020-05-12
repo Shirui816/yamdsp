@@ -12,8 +12,8 @@ def cu_cell_index(x, box, ibox):
     ret = floor((x[0] / box[0] + 0.5) * ibox[0])
     ncell = ibox[0]
     for i in range(1, x.shape[0]):
-        ret += floor((x[i] / box[i] + 0.5) * ibox[i]) * ncell
-        ncell *= ibox[i]
+        ret = ret + floor((x[i] / box[i] + 0.5) * ibox[i]) * ncell
+        ncell = ncell * ibox[i]
     return ret
 
 
