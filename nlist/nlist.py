@@ -31,7 +31,7 @@ def gen_cell_map(ndim):
             for k in range(ndim):
                 cell_vec_j[k] = cell_vec_i[k] + cell_vec_j[k] - 1
             cell_j = cu_ravel_index_f_pbc(cell_vec_j, ibox)
-            ret[cell_i, j - 13] = cell_j
+            ret[cell_i, j] = cell_j
 
     return cu_cell_map
 
