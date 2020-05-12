@@ -117,6 +117,7 @@ def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl,
 
 @cuda.jit("void(float64[:, :], float64[:], float64[:, :], float64, int32[:])")
 def cu_check_build(x, box, last_x, r_buff2, situation):
+    # rebuild lists if there exist particles move larger than buffer
     i = cuda.grid(1)
     if i < x.shape[0]:
         dr2 = cu_pbc_dist2(x[i], last_x[i], box)
