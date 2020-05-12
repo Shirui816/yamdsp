@@ -91,6 +91,7 @@ def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl,
     ic = cells[pi]
     n_needed = 0
     nn = 0
+    xi = x[pi]
     for j in range(cell_map.shape[1]):
         jc = cell_map[ic, j]
         for k in range(cell_count[jc]):
@@ -99,7 +100,7 @@ def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl,
                 continue
             # for m in range(ndim):
             # xj[m] = x[pj, m]
-            r2 = cu_pbc_dist2(x[pi], x[pj], box)
+            r2 = cu_pbc_dist2(xi, x[pj], box)
             if r2 < r_cut2:
                 if nn < nl.shape[1]:
                     nl[pi, nn] = pj
