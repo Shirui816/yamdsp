@@ -3,7 +3,7 @@ import gc
 import numpy as np
 from numba import cuda
 
-from ._helpers import Ctx
+from lib._helpers import Ctx
 
 
 class system:

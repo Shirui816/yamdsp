@@ -5,8 +5,8 @@ import numpy as np
 from numba import cuda
 from numba import int32
 
-from yamdsp._helpers import Ctx
-from yamdsp.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
+from lib._helpers import Ctx
+from lib.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
 from . import cu_set_to_int
 
 

@@ -1,18 +1,38 @@
-from math import floor
-
 import numpy as np
 from numba import cuda
-from .clist_sort import clist
 
-from yamdsp._helpers import Ctx
-from yamdsp.utils import cu_pbc_dist2
+from lib._helpers import Ctx
+from lib.utils import cu_pbc_dist2
+from .clist import clist
 
-from . import cu_set_to_int
+
+@cuda.jit("void(int32[:], int32[:])")
+def cu_max_int(arr, arr_max):
+    i = cuda.grid(1)
+    if i >= arr.shape[0]:
+        return
+    cuda.atomic.max(arr_max, 0, arr[i])
+
+
+@cuda.jit("void(int32[:], int32)")
+def cu_set_to_int(arr, val):
+    i = cuda.grid(1)
+    if i >= arr.shape[0]:
+        return
+    arr[i] = val
+
+
+@cuda.jit("void(float64[:], float64)")
+def cu_set_to_float(arr, val):
+    i = cuda.grid(1)
+    if i >= arr.shape[0]:
+        return
+    arr[i] = val
 
 
 @cuda.jit(
     "void(float64[:,:], float64[:,:], float64[:], float64, int32[:,:],"
-    "int32[:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
+    "int32[:,:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
 def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max, situation):
     pi = cuda.grid(1)
     if pi >= x.shape[0]:
@@ -27,10 +47,8 @@ def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl,
     xi = x[pi]
     for j in range(cell_map.shape[1]):
         jc = cell_map[ic, j]
-        start = cell_count[jc]
-        end = cell_count[jc + 1]
-        for k in range(start, end):
-            pj = cell_list[k]
+        for k in range(cell_count[jc]):
+            pj = cell_list[jc, k]
             if pj == pi:
                 continue
             # for m in range(ndim):
@@ -62,11 +80,12 @@ def cu_check_build(x, box, last_x, r_buff2, situation):
 
 
 class nlist(object):
-    def __init__(self, r_cut, r_buff=0.5, n_guess=150):
+    def __init__(self, r_cut, r_buff=0.5, cell_guess=50, n_guess=150):
         system = Ctx.get_active()
         if system is None:
             raise ValueError("No active system!")
         self.system = system
+        self.cell_guess = cell_guess
         self.n_guess = n_guess
         self.r_cut2 = r_cut ** 2
         self.r_buff2 = (r_buff / 2) ** 2
@@ -74,16 +93,13 @@ class nlist(object):
         self.tpb = 64
         self.bpg = int(self.system.N // self.tpb + 1)
         # self.situ_zero = np.zeros(1, dtype=np.int32)
-
         self.update_counts = 0
         with cuda.gpus[self.gpu]:
-            # self.d_cells = cuda.device_array((self.system.N,), dtype=np.int32)
-            # self.d_situation = cuda.to_device(self.situ_zero)
-            self.d_situation = cuda.device_array((1,), dtype=np.int32)
             self.d_last_x = cuda.device_array_like(self.system.d_x)
             self.d_n_max = cuda.device_array(1, dtype=np.int32)
             self.d_nl = cuda.device_array((self.system.N, self.n_guess), dtype=np.int32)
             self.d_nc = cuda.device_array((self.system.N,), dtype=np.int32)
+            self.d_situation = cuda.device_array(1, dtype=np.int32)
         self.clist = clist(r_cut, r_buff)
         self.neighbour_list()
 
@@ -125,9 +141,9 @@ class nlist(object):
             self.update_counts += 1
 
     def show(self):
-        cell_list = self.clist.d_cell_list
+        cell_list = self.clist.d_cell_list.copy_to_host()
         cell_map = self.clist.d_cell_map.copy_to_host()
-        cell_counts = self.clist.d_cell_counts
+        cell_counts = self.clist.d_cell_counts.copy_to_host()
         nl = self.d_nl.copy_to_host()
         nc = self.d_nc.copy_to_host()
         cuda.synchronize()
