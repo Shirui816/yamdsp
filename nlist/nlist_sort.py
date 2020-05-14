@@ -4,15 +4,15 @@ import numpy as np
 from numba import cuda
 from .clist_sort import clist
 
-from _helpers import Ctx
-from utils import cu_pbc_dist2
+from yamdsp._helpers import Ctx
+from yamdsp.utils import cu_pbc_dist2
 
 from . import cu_set_to_int
 
 
 @cuda.jit(
     "void(float64[:,:], float64[:,:], float64[:], float64, int32[:,:],"
-    "int32[:,:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
+    "int32[:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
 def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max, situation):
     pi = cuda.grid(1)
     if pi >= x.shape[0]:
@@ -114,8 +114,11 @@ class nlist(object):
         cuda.synchronize()
         return situation
 
-    def update(self):
-        s = self.check_update()
+    def update(self, forced=False):
+        if not forced:
+            s = self.check_update()
+        else:
+            s = [1]
         if s[0] == 1:
             self.clist.update()
             self.neighbour_list()
@@ -124,7 +127,7 @@ class nlist(object):
     def show(self):
         cell_list = self.clist.d_cell_list
         cell_map = self.clist.d_cell_map.copy_to_host()
-        cell_counts = self.clist.d_cell_counts.copy_to_host()
+        cell_counts = self.clist.d_cell_counts
         nl = self.d_nl.copy_to_host()
         nc = self.d_nc.copy_to_host()
         cuda.synchronize()

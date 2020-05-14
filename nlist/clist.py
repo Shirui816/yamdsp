@@ -4,8 +4,8 @@ import numpy as np
 from numba import cuda
 from numba import int32
 
-from _helpers import Ctx
-from utils import cu_unravel_index_f, cu_ravel_index_f_pbc
+from yamdsp._helpers import Ctx
+from yamdsp.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
 from . import cu_set_to_int
 
 
@@ -56,18 +56,19 @@ def cu_cell_list(x, box, ibox, cell_list, cell_counts, cells, cell_max):
 
 
 class clist:
-    def __init__(self, r_cut, r_buff=0.5):
+    def __init__(self, r_cut, r_buff=0.5, cell_guess=50):
         system = Ctx.get_active()
         if system is None:
             raise ValueError("Error, Initialize system first!")
         self.system = system
         self.ibox = np.asarray(np.floor(system.box / (r_cut + r_buff)), dtype=np.int32)
-        self.n_cell = np.multiply.reduce(self.ibox)
+        self.n_cell = int(np.multiply.reduce(self.ibox))
         self.cell_adj = np.ones(self.system.n_dim, dtype=np.int32) * 3
         self.gpu = system.gpu
         self.tpb = 64
         self.bpg = int(self.system.N // self.tpb + 1)
         self.bpg_cell = int(self.n_cell // self.tpb + 1)
+        self.cell_guess = cell_guess
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         cu_cell_map = gen_cell_map(system.n_dim)
         with cuda.gpus[self.gpu]:
@@ -75,7 +76,7 @@ class clist:
             # self.d_situation = cuda.to_device(self.situ_zero)
             self.d_situation = cuda.device_array((1,), dtype=np.int32)
             self.d_last_x = cuda.device_array_like(self.system.d_x)
-            self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.ndim), dtype=np.int32)
+            self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.n_dim), dtype=np.int32)
             self.d_ibox = cuda.to_device(self.ibox)
             self.d_cell_adj = cuda.to_device(self.cell_adj)
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)

@@ -1,8 +1,8 @@
 import numpy as np
 from numba import cuda
 
-from _helpers import Ctx
-from utils import cu_pbc_dist2
+from yamdsp._helpers import Ctx
+from yamdsp.utils import cu_pbc_dist2
 from .clist import clist
 
 
@@ -130,8 +130,11 @@ class nlist(object):
         cuda.synchronize()
         return situation
 
-    def update(self):
-        s = self.check_update()
+    def update(self, forced=False):
+        if not forced:
+            s = self.check_update()
+        else:
+            s = [1]
         if s[0] == 1:
             self.clist.update()
             self.neighbour_list()

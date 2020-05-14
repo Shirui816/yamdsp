@@ -3,7 +3,7 @@ import gc
 import numpy as np
 from numba import cuda
 
-from _helpers import Ctx
+from ._helpers import Ctx
 
 
 class system:
@@ -15,9 +15,9 @@ class system:
         self.gpu = gpu
         typ = np.asarray(typ)
         self.types = list(set(typ))
-        self.typeid = np.zeros(self.N, dtype=np.int32)
+        self.typid = np.zeros(self.N, dtype=np.int32)
         for i, t in enumerate(self.types):
-            self.typeid[typ == t] = i
+            self.typid[typ == t] = i
         if bond:
             self.bond = bond
             self.bonds = np.asarray(list(set(bond.T[0])), dtype=np.int32)
@@ -53,6 +53,6 @@ class system:
         cuda.synchronize()
         return self
 
-    def destory(self):
+    def destroy(self):
         # delete variables in self.
         gc.collect(1)

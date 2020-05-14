@@ -5,8 +5,8 @@ import numpy as np
 from numba import cuda
 from numba import int32
 
-from _helpers import Ctx
-from utils import cu_unravel_index_f, cu_ravel_index_f_pbc
+from yamdsp._helpers import Ctx
+from yamdsp.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
 from . import cu_set_to_int
 
 
@@ -39,7 +39,7 @@ def gen_cell_map(ndim):
     return cu_cell_map
 
 
-@cuda.jit("void(float64[:, :], float64[:], int64[:], int64[:], int64[:]")
+@cuda.jit("void(float64[:, :], float64[:], int32[:], int32[:], int32[:])")
 def cu_cell_list(pos, box, ibox, cells, cell_counts):
     i = cuda.grid(1)
     if i < pos.shape[0]:
@@ -58,7 +58,7 @@ class clist:
         self.r_cut = r_cut
         self.r_buff = r_buff
         self.ibox = np.asarray(np.floor(system.box / (r_cut + r_buff)), dtype=np.int32)
-        self.n_cell = np.multiply.reduce(self.ibox)
+        self.n_cell = int(np.multiply.reduce(self.ibox))
         self.cell_adj = np.ones(system.n_dim, dtype=np.int32) * 3
         self.gpu = system.gpu
         self.tpb = 64
@@ -68,7 +68,7 @@ class clist:
         self.d_cell_list = None
         with cuda.gpus[self.gpu]:
             self.d_cells = cupy.empty((system.N,), dtype=np.int32)
-            self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.ndim), dtype=np.int32)
+            self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.n_dim), dtype=np.int32)
             self.d_ibox = cuda.to_device(self.ibox)
             self.d_cell_adj = cuda.to_device(self.cell_adj)
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
