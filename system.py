@@ -1,27 +1,42 @@
+import gc
+
 import numpy as np
 from numba import cuda
 
+from _helpers import Ctx
+
 
 class system:
-    def __init__(self, x, box, typid, bond, diameter=None, gpu=0):
+    def __init__(self, x, box, typ, bond, diameter=None, gpu=0, num=None):
         self.x = x
         self.box = box
         self.N = x.shape[0]
         self.n_dim = x.shape[1]
         self.gpu = gpu
-        self.typid = typid
-        self.types = np.asarray(list(set(typid)), dtype=np.int32)
+        typ = np.asarray(typ)
+        self.types = list(set(typ))
+        self.typeid = np.zeros(self.N, dtype=np.int32)
+        for i, t in enumerate(self.types):
+            self.typeid[typ == t] = i
         self.bond = bond
         self.bonds = np.asarray(list(set(bond.T[0])), dtype=np.int32)
         self.diameter = diameter if diameter is not None else np.ones(self.N, dtype=np.float64)
         with cuda.gpus[gpu]:
             self.d_x = cuda.to_device(x)
             self.d_box = cuda.to_device(box)
-            self.d_typid = cuda.to_device(typid)
-            self.d_types = cuda.to_device(self.types)
+            self.d_typid = cuda.to_device(self.typid)
+            # self.d_types = cuda.to_device(self.types)
             self.d_bond = cuda.to_device(bond)
             self.d_bonds = cuda.to_device(self.bonds)
             self.d_diameter = cuda.to_device(diameter)
+            self.d_force = cuda.device_array((self.N, self.n_dim), dtype=np.float64)
+        if num is None:
+            system.num = Ctx.get_num_systems() + 1
+        else:
+            if Ctx.has_num(num):
+                raise ValueError("Number %d has already been registered!"
+                                 "Please assign new number of system." % num)
+        Ctx.set_active(self)
 
     def bond_table(self):
         pass
@@ -35,3 +50,7 @@ class system:
         # whatever has been changed
         cuda.synchronize()
         return self
+
+    def destory(self):
+        # delete variables in self.
+        gc.collect(1)
