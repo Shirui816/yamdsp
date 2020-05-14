@@ -20,6 +20,10 @@ ret_a = nlist_a.show()
 nl_a, nc_a = ret_a[-2], ret_a[-1]
 print(nl_a[0, :nc_a[0]], nc_a[0])
 
+nl_a.sort(axis=-1)
+nl_s.sort(axis=-1)
+print(np.allclose(nl_a, nl_s))
+
 import time
 
 s = time.time()
