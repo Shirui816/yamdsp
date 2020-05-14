@@ -7,7 +7,6 @@ from numba import int32
 
 from lib._helpers import Ctx
 from lib.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
-from . import cu_set_to_int
 
 
 @cuda.jit("int32(float64[:], float64[:], int32[:])", device=True)
@@ -81,7 +80,7 @@ class clist:
 
     def update(self):
         with cuda.gpus[self.gpu]:
-            cu_set_to_int[self.bpg_cell, self.tpb](self.d_cell_counts, 0)
+            self.d_cell_counts.fill(0)
             cu_cell_list[self.bpg_part, self.tpb](self.system.d_x, self.system.d_box, self.d_ibox,
                                                   self.d_cells, self.d_cell_counts)
             cupy.cumsum(self.d_cell_counts, out=self.d_cell_counts)
