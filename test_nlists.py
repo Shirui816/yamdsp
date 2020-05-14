@@ -1,7 +1,7 @@
 from lib.system import system
 import numpy as np
 
-x = np.loadtxt('pos.txt')
+x = np.loadtxt('data/pos.txt')
 box = np.array([50,50,50.])
 typ = np.ones(x.shape[0])
 s = system(x, box, typ)
