@@ -8,6 +8,7 @@ from lib._helpers import Ctx
 
 class system:
     def __init__(self, x, box, typ, bond=None, diameter=None, gpu=0, num=None):
+        cuda.select_device(gpu)  # select gpu before everything.
         self.x = x
         self.box = box
         self.N = x.shape[0]
