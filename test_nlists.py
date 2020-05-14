@@ -7,12 +7,6 @@ box = np.array([50, 50, 50.])
 typ = np.ones(x.shape[0])
 s = system(x, box, typ)
 
-# from yamdsp.nlist.clist import clist as clist
-
-# clist_s = clist_sort(3.0, 0.5)
-# print(clist_s.d_cell_list, clist_s.d_cell_list.shape)
-# clist_a = clist(3.0, 0.5)
-
 from lib.nlist.nlist_sort import nlist as nlist_sort
 from lib.nlist.nlist import nlist as nlist
 
