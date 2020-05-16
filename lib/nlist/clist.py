@@ -71,6 +71,7 @@ class clist:
         self.cell_guess = cell_guess
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         cu_cell_map = gen_cell_map(system.n_dim)
+        self.p_cell_max = cuda.pinned_array((1,), dtype=np.int32)
         with cuda.gpus[self.gpu]:
             self.d_cells = cuda.device_array((self.system.N,), dtype=np.int32)
             # self.d_situation = cuda.to_device(self.situ_zero)
@@ -91,10 +92,10 @@ class clist:
                 cu_set_to_int[self.bpg_cell, self.tpb](self.d_cell_counts, 0)
                 cu_cell_list[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_ibox, self.d_cell_list,
                                                  self.d_cell_counts, self.d_cells, self.d_cell_max)
-                cell_max = self.d_cell_max.copy_to_host()
+                self.d_cell_max.copy_to_host(self.d_cell_max)
                 cuda.synchronize()
-                if cell_max[0] > self.cell_guess:
-                    self.cell_guess = cell_max[0]
+                if self.d_cell_max[0] > self.cell_guess:
+                    self.cell_guess = self.d_cell_max[0]
                     self.cell_guess = self.cell_guess + 8 - (self.cell_guess & 7)
                     self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
                 else:

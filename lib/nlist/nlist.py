@@ -95,6 +95,8 @@ class nlist(object):
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         self.update_counts = 0
         with cuda.gpus[self.gpu]:
+            self.m_n_max = cuda.mapped_array((1,), dtype=np.int32)
+            self.m_situation = cuda.mapped_array((1,), dtype=np.int32)
             self.d_last_x = cuda.device_array_like(self.system.d_x)
             self.d_n_max = cuda.device_array(1, dtype=np.int32)
             self.d_nl = cuda.device_array((self.system.N, self.n_guess), dtype=np.int32)
@@ -111,12 +113,12 @@ class nlist(object):
                 cu_nlist[self.bpg, self.tpb](self.system.d_x, self.d_last_x, self.system.d_box, self.r_cut2,
                                              self.clist.d_cell_map, self.clist.d_cell_list,
                                              self.clist.d_cell_counts, self.clist.d_cells,
-                                             self.d_nl, self.d_nc, self.d_n_max, self.d_situation)
-                n_max = self.d_n_max.copy_to_host()
+                                             self.d_nl, self.d_nc, self.m_n_max, self.m_situation)
+                #self.d_n_max.copy_to_host(self.p_n_max)
                 cuda.synchronize()
                 # n_max = np.array([120])
-                if n_max[0] > self.n_guess:
-                    self.n_guess = n_max[0]
+                if self.m_n_max[0] > self.n_guess:
+                    self.n_guess = self.m_n_max[0]
                     self.n_guess = self.n_guess + 8 - (self.n_guess & 7)
                     self.d_nl = cuda.device_array((self.system.N, self.n_guess), dtype=np.int32)
                 else:
@@ -125,10 +127,9 @@ class nlist(object):
     def check_update(self):
         with cuda.gpus[self.gpu]:
             cu_check_build[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_last_x, self.r_buff2,
-                                               self.d_situation)
-        situation = self.d_situation.copy_to_host()
+                                               self.m_situation)
         cuda.synchronize()
-        return situation
+        return self.m_situation
 
     def update(self, forced=False):
         if not forced:
