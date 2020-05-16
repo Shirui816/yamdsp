@@ -1,6 +1,8 @@
-from lib._helpers import Ctx
 import numpy as np
 from numba import cuda
+
+from lib._helpers import Ctx
+from lib.utils import cu_pbc_dist2
 
 
 class pair:
@@ -29,13 +31,13 @@ class pair:
 
     def get_params(self):
         return self.params
-    
+
     def check_params(self):
         return isinstance(self.params, np.ndarray)
 
     def force_functions(self, funcs):  # general pair cases
-        #@cuda.jit("void(float64[:], float64[:], float64[:], float64[:], float64[:,:])", device=True)
-        #def func(a, b, param, forces):
+        # @cuda.jit("void(float64[:], float64[:], float64[:], float64[:], float64[:,:])", device=True)
+        # def func(a, b, param, forces):
         #    pass
         kernels = []
         for f in funcs:
@@ -49,6 +51,8 @@ class pair:
                 for k in range(nc[i]):
                     j = nl[i, k]
                     tj = typeid[j]
-                    f(xi, x[j], box, params[ti * n_types + tj], forces)
+                    dij2 = cu_pbc_dist2(xi, x[j], box)
+                    f(dij2, box, params[ti * n_types + tj], forces)
+
             kernels.append(_f)
         return kernels
