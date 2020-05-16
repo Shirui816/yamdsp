@@ -114,7 +114,7 @@ class nlist(object):
                                              self.clist.d_cell_map, self.clist.d_cell_list,
                                              self.clist.d_cell_counts, self.clist.d_cells,
                                              self.d_nl, self.d_nc, self.m_n_max, self.m_situation)
-                #self.d_n_max.copy_to_host(self.p_n_max)
+                # self.d_n_max.copy_to_host(self.p_n_max)
                 cuda.synchronize()
                 # n_max = np.array([120])
                 if self.m_n_max[0] > self.n_guess:
