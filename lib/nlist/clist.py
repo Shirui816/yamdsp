@@ -81,7 +81,8 @@ class clist:
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
             self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
-            self.m_cell_max = cuda.mapped_array(1, dtype=np.int32)
+            self.p_cell_max = cuda.pinned_array(1, dtype=np.int32)
+            self.d_cell_max = cuda.device_array(1, dtype=np.int32)
         self.update()
 
     def update(self):
@@ -89,10 +90,11 @@ class clist:
             while True:
                 cu_set_to_int[self.bpg_cell, self.tpb](self.d_cell_counts, 0)
                 cu_cell_list[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_ibox, self.d_cell_list,
-                                                 self.d_cell_counts, self.d_cells, self.m_cell_max)
+                                                 self.d_cell_counts, self.d_cells, self.d_cell_max)
+                self.d_cell_max.copy_to_host(self.p_cell_max)
                 cuda.synchronize()
-                if self.m_cell_max[0] > self.cell_guess:
-                    self.cell_guess = self.m_cell_max[0]
+                if self.p_cell_max[0] > self.cell_guess:
+                    self.cell_guess = self.p_cell_max[0]
                     self.cell_guess = self.cell_guess + 8 - (self.cell_guess & 7)
                     self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
                 else:
