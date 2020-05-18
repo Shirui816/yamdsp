@@ -8,6 +8,15 @@ from lib._helpers import Ctx
 
 class system:
     def __init__(self, x, box, typ, bond=None, diameter=None, gpu=0, num=None):
+        gpu_table = {}
+        for s in Ctx.get_all_systems():
+            if gpu_table.get(s.gpu) is None:
+                gpu_table[s.gpu] = []
+            gpu_table[s.gpu].append(s.num)
+        if gpu in gpu_table.keys():
+            raise ValueError(
+                "gpu %d has been already occupied by system %s!" % (gpu, gpu_table[gpu])
+            )
         cuda.select_device(gpu)  # select gpu before everything.
         self.x = x
         self.box = box
@@ -55,5 +64,7 @@ class system:
         return self
 
     def destroy(self):
+        context = cuda.current_context(self.gpu)
+        context.reset()
         # delete variables in self.
         gc.collect(1)
