@@ -26,12 +26,14 @@ print(np.allclose(nl_a, nl_s))
 
 import time
 
+nloop = 1000
 s = time.time()
-for i in range(1000):
+for i in range(nloop):
     nlist_s.update(forced=True)
     # nlist_a.update(forced=True)
-print(time.time() - s, "sort")
-for i in range(1000):
+print(nloop/(time.time() - s), "sort")
+s = time.time()
+for i in range(nloop):
     nlist_a.update(forced=True)
     # nlist_a.update(forced=True)
-print(time.time() - s, "non-sort")
+print(nloop/(time.time() - s), "non-sort")
