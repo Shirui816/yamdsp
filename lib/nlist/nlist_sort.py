@@ -61,7 +61,7 @@ def _gen_func(dtype):
         if pi == 0:  # reset situation only once while function is called
             situation[0] = 0
 
-    @cuda.jit(void(float[:, :], float[:], float64[:, :], float, int32[:]))
+    @cuda.jit(void(float[:, :], float[:], float[:, :], float, int32[:]))
     def cu_check_build(x, box, last_x, r_buff2, situation):
         # rebuild lists if there exist particles move larger than buffer
         i = cuda.grid(1)

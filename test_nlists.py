@@ -2,8 +2,8 @@ import numpy as np
 
 from lib.system import system
 
-x = np.loadtxt('data/pos.txt')
-box = np.array([50, 50, 50.])
+x = np.loadtxt('data/pos.txt').astype(np.float32)
+box = np.array([50, 50, 50.]).astype(np.float32)
 typ = np.ones(x.shape[0])
 s = system(x, box, typ)
 
