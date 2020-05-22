@@ -53,6 +53,8 @@ def _gen_func(dtype, n_dim):
         # xj = cuda.local.array(ndim, dtype=float64)
         # for l in range(ndim):
         #    xi[l] = x[pi, l]
+        xj = cuda.local.array(n_dim, dtype=float)
+        boxi = box
         ic = cells[pi]
         n_needed = 0
         nn = 0
@@ -60,7 +62,6 @@ def _gen_func(dtype, n_dim):
         for j in range(cell_map.shape[1]):
             jc = cell_map[ic, j]
             for k in range(cell_count[jc]):
-                xj = cuda.local.array(n_dim, dtype=float)
                 xjp = cell_list[jc, k]
                 pj = xjp[n_dim]
                 if pj == pi:
@@ -69,7 +70,7 @@ def _gen_func(dtype, n_dim):
                     xj[l] = xjp[l]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, xj, box)
+                r2 = cu_pbc_dist2(xi, xj, boxi)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = int32(pj)
