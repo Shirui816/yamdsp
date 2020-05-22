@@ -70,7 +70,7 @@ def _gen_func(dtype, n_dim):
                 r2 = cu_pbc_dist2(xi, x[pj], boxi)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
-                        nl[pi, nn] = int32(pj)
+                        nl[pi, nn] = pj
                     else:
                         n_needed = nn + 1
                     nn += 1
