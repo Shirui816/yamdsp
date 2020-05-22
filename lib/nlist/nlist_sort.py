@@ -4,7 +4,6 @@ from numba import cuda, void, float64, float32, int32
 from . import cu_set_to_int
 from .clist_sort import clist
 from .._helpers import Ctx
-from ..utils import cu_pbc_dist2
 
 
 def _gen_func(dtype):
