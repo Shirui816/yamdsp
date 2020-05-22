@@ -1,9 +1,9 @@
 import numpy as np
 from numba import cuda
 
+from .clist import clist
 from .._helpers import Ctx
 from ..utils import cu_pbc_dist2
-from .clist import clist
 
 
 @cuda.jit("void(int32[:], int32[:])")
@@ -31,9 +31,9 @@ def cu_set_to_float(arr, val):
 
 
 @cuda.jit(
-    "void(float64[:,:], float64[:,:], float64[:], float64, int32[:,:],"
-    "int32[:,:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
-def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max, situation):
+    "void(float64[:,:], float64[:,:], float64[:], float64, int32[:,:],int32[:,:],"
+    "float64[:,:,:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
+def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list_index, cell_list, cell_count, cells, nl, nc, n_max, situation):
     pi = cuda.grid(1)
     if pi >= x.shape[0]:
         return
@@ -48,12 +48,13 @@ def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl,
     for j in range(cell_map.shape[1]):
         jc = cell_map[ic, j]
         for k in range(cell_count[jc]):
-            pj = cell_list[jc, k]
+            pj = cell_list_index[jc, k]
             if pj == pi:
                 continue
+            xj = cell_list[jc, k]
             # for m in range(ndim):
             # xj[m] = x[pj, m]
-            r2 = cu_pbc_dist2(xi, x[pj], box)
+            r2 = cu_pbc_dist2(xi, xj, box)
             if r2 < r_cut2:
                 if nn < nl.shape[1]:
                     nl[pi, nn] = pj
@@ -111,7 +112,8 @@ class nlist(object):
                 cu_set_to_int[self.bpg, self.tpb](self.d_nc, 0)
                 # reset situation while build nlist
                 cu_nlist[self.bpg, self.tpb](self.system.d_x, self.d_last_x, self.system.d_box, self.r_cut2,
-                                             self.clist.d_cell_map, self.clist.d_cell_list,
+                                             self.clist.d_cell_map, self.clist.d_cell_list_index,
+                                             self.clist.d_cell_list,
                                              self.clist.d_cell_counts, self.clist.d_cells,
                                              self.d_nl, self.d_nc, self.d_n_max, self.d_situation)
                 self.d_n_max.copy_to_host(self.p_n_max)
