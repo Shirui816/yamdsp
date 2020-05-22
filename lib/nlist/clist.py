@@ -51,7 +51,8 @@ def _gen_func(dtype, n_dim):
         cells[pi] = ic
         index = cuda.atomic.add(cell_counts, ic, 1)
         if index < cell_list.shape[0]:
-            cell_list[ic, index] = xi
+            for k in range(n_dim):
+                cell_list[ic, index, k] = xi[k]
             cell_list_index[ic, index] = pi
         else:
             cuda.atomic.max(cell_max, 0, index + 1)
