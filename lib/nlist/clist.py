@@ -74,8 +74,8 @@ class clist:
         self.bpg_cell = int(self.n_cell // self.tpb + 1)
         self.cell_guess = cell_guess
         # self.situ_zero = np.zeros(1, dtype=np.int32)
-        cu_cell_index, cu_cell_map, cu_cell_list = _gen_func(system.dtype, system.n_dim)
         global cu_cell_index, cu_cell_map, cu_cell_list
+        cu_cell_index, cu_cell_map, cu_cell_list = _gen_func(system.dtype, system.n_dim)
         self.p_cell_max = cuda.pinned_array((1,), dtype=np.int32)
         with cuda.gpus[self.gpu]:
             self.d_last_x = cuda.device_array_like(self.system.d_x)
