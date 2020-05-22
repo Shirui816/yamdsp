@@ -32,7 +32,7 @@ class system:
         if bond:
             self.bond = bond
             self.bonds = np.asarray(list(set(bond.T[0])), dtype=np.int32)
-        self.diameter = diameter if diameter is not None else np.ones(self.N, dtype=np.float64)
+        self.diameter = diameter if diameter is not None else np.ones(self.N, dtype=x.dtype)
         with cuda.gpus[gpu]:
             self.d_x = cuda.to_device(x)
             self.d_box = cuda.to_device(box)
@@ -42,7 +42,7 @@ class system:
                 self.d_bond = cuda.to_device(bond)
                 self.d_bonds = cuda.to_device(self.bonds)
             self.d_diameter = cuda.to_device(diameter)
-            self.d_force = cuda.device_array((self.N, self.n_dim), dtype=np.float64)
+            self.d_force = cuda.device_array((self.N, self.n_dim), dtype=x.dtype)
         if num is None:
             system.num = Ctx.get_num_systems() + 1
         else:
