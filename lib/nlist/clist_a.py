@@ -38,7 +38,7 @@ def _gen_func(dtype, n_dim):
             cell_j = cu_ravel_index_f_pbc(cell_vec_j, ibox)
             ret[cell_i, j] = cell_j
 
-    @cuda.jit(void(float[:, :], float[:], int32[:], int32[:, :], int32[:], int32[:], int32[:]))
+    @cuda.jit(void(float[:, :], float[:], int32[:], float[:, :, :], int32[:], int32[:], int32[:]))
     def cu_cell_list(x, box, ibox, cell_list, cell_counts, cells, cell_max):
         pi = cuda.grid(1)
         if pi >= x.shape[0]:
@@ -51,7 +51,10 @@ def _gen_func(dtype, n_dim):
         cells[pi] = ic
         index = cuda.atomic.add(cell_counts, ic, 1)
         if index < cell_list.shape[0]:
-            cell_list[ic, index] = pi
+            for k in range(n_dim):
+                cell_list[ic, index, k] = xi[k]
+            cell_list[ic, index, n_dim] = float(pi)
+            #cell_list_index[ic, index] = pi
         else:
             cuda.atomic.max(cell_max, 0, index + 1)
 
@@ -83,8 +86,8 @@ class clist:
             self.d_ibox = cuda.to_device(self.ibox)
             self.d_cell_adj = cuda.to_device(self.cell_adj)
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
-            self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess),
-                                                 dtype=np.int32)
+            self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim + 1),
+                                                 dtype=self.system.dtype)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
             self.d_cell_max = cuda.device_array(1, dtype=np.int32)
         self.update()
@@ -105,7 +108,7 @@ class clist:
                 if self.p_cell_max[0] > self.cell_guess:
                     self.cell_guess = self.p_cell_max[0]
                     self.cell_guess = self.cell_guess + 8 - (self.cell_guess & 7)
-                    self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess),
-                                                         dtype=np.int32)
+                    self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim + 1),
+                                                         dtype=self.system.dtype)
                 else:
                     break

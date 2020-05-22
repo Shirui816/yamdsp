@@ -1,7 +1,7 @@
 import numpy as np
 from numba import cuda, void, int32, float32, float64
 
-from .clist import clist
+from .clist_a import clist
 from .._helpers import Ctx
 
 
@@ -42,7 +42,7 @@ def _gen_func(dtype, n_dim):
         arr[i] = val
 
     @cuda.jit(
-        void(float[:, :], float[:, :], float[:], float, int32[:, :], int32[:, :], int32[:], int32[:],
+        void(float[:, :], float[:, :], float[:], float, int32[:, :], float[:, :, :], int32[:], int32[:],
              int32[:, :], int32[:], int32[:], int32[:]))
     def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max,
                  situation):
@@ -62,12 +62,15 @@ def _gen_func(dtype, n_dim):
         for j in range(cell_map.shape[1]):
             jc = cell_map[ic, j]
             for k in range(cell_count[jc]):
-                pj = cell_list[jc, k]
+                xjp = cell_list[jc, k]
+                pj = xjp[n_dim]
                 if pj == pi:
                     continue
+                for l in range(n_dim):
+                    xj[l] = xjp[l]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, x[pj], boxi)
+                r2 = cu_pbc_dist2(xi, xj, boxi)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = int32(pj)
