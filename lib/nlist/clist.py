@@ -53,7 +53,7 @@ def _gen_func(dtype, n_dim):
         if index < cell_list.shape[0]:
             for k in range(n_dim):
                 cell_list[ic, index, k] = xi[k]
-            cell_list[ic, index, n_dim + 1] = float(pi)
+            cell_list[ic, index, n_dim] = float(pi)
             #cell_list_index[ic, index] = pi
         else:
             cuda.atomic.max(cell_max, 0, index + 1)
@@ -86,7 +86,7 @@ class clist:
             self.d_ibox = cuda.to_device(self.ibox)
             self.d_cell_adj = cuda.to_device(self.cell_adj)
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
-            self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim),
+            self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim + 1),
                                                  dtype=self.system.dtype)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
             self.d_cell_max = cuda.device_array(1, dtype=np.int32)
