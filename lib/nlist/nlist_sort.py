@@ -106,10 +106,18 @@ class nlist(object):
             while True:
                 cu_set_to_int[self.bpg, self.tpb](self.d_nc, 0)
                 # reset situation while build nlist
-                cu_nlist[self.bpg, self.tpb](self.system.d_x, self.d_last_x, self.system.d_box, self.r_cut2,
-                                             self.clist.d_cell_map, self.clist.d_cell_list,
-                                             self.clist.d_cell_counts, self.clist.d_cells,
-                                             self.d_nl, self.d_nc, self.d_n_max, self.d_situation)
+                cu_nlist[self.bpg, self.tpb](self.system.d_x,
+                                             self.d_last_x,
+                                             self.system.d_box,
+                                             self.r_cut2,
+                                             self.clist.d_cell_map,
+                                             self.clist.d_cell_list,
+                                             self.clist.d_cell_counts,
+                                             self.clist.d_cells,
+                                             self.d_nl,
+                                             self.d_nc,
+                                             self.d_n_max,
+                                             self.d_situation)
                 self.d_n_max.copy_to_host(self.p_n_max)
                 cuda.synchronize()
                 # n_max = np.array([120])
