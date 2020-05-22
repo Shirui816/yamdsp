@@ -36,6 +36,7 @@ def _gen_func(dtype):
         n_needed = 0
         nn = 0
         xi = x[pi]
+        boxi = box
         for j in range(cell_map.shape[1]):
             jc = cell_map[ic, j]
             start = cell_count[jc]
@@ -46,7 +47,7 @@ def _gen_func(dtype):
                     continue
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, x[pj], box)
+                r2 = cu_pbc_dist2(xi, x[pj], boxi)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = pj
