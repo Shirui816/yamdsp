@@ -1,61 +1,79 @@
 import numpy as np
-from numba import cuda
+from numba import cuda, void, float64, float32, int32
 
-from .._helpers import Ctx
-from ..utils import cu_pbc_dist2
 from . import cu_set_to_int
 from .clist_sort import clist
+from .._helpers import Ctx
+from ..utils import cu_pbc_dist2
 
 
-@cuda.jit(
-    "void(float64[:,:], float64[:,:], float64[:], float64, int32[:,:],"
-    "int32[:], int32[:], int32[:], int32[:,:], int32[:], int32[:], int32[:])")
-def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max, situation):
-    pi = cuda.grid(1)
-    if pi >= x.shape[0]:
-        return
-    # xi = cuda.local.array(ndim, dtype=float64)
-    # xj = cuda.local.array(ndim, dtype=float64)
-    # for l in range(ndim):
-    #    xi[l] = x[pi, l]
-    ic = cells[pi]
-    n_needed = 0
-    nn = 0
-    xi = x[pi]
-    for j in range(cell_map.shape[1]):
-        jc = cell_map[ic, j]
-        start = cell_count[jc]
-        end = cell_count[jc + 1]
-        for k in range(start, end):
-            pj = cell_list[k]
-            if pj == pi:
-                continue
-            # for m in range(ndim):
-            # xj[m] = x[pj, m]
-            r2 = cu_pbc_dist2(xi, x[pj], box)
-            if r2 < r_cut2:
-                if nn < nl.shape[1]:
-                    nl[pi, nn] = pj
-                else:
-                    n_needed = nn + 1
-                nn += 1
-    nc[pi] = nn
-    for k in range(x.shape[1]):
-        last_x[pi, k] = x[pi, k]
-    if nn > 0:
-        cuda.atomic.max(n_max, 0, n_needed)
-    if pi == 0:  # reset situation only once while function is called
-        situation[0] = 0
+def _gen_func(dtype):
+    from math import floor
+    float = float64
+    if dtype == np.dtype(np.float32):
+        float = float32
 
+    def _gen_nlist():
+        @cuda.jit(float(float[:], float[:], float[:]), device=True)
+        def cu_pbc_dist2(a, b, box):
+            ret = 0
+            for i in range(a.shape[0]):
+                d = a[i] - b[i]
+                d -= box[i] * floor(d / box[i] + 0.5)
+                ret += d ** 2
+            return ret
 
-@cuda.jit("void(float64[:, :], float64[:], float64[:, :], float64, int32[:])")
-def cu_check_build(x, box, last_x, r_buff2, situation):
-    # rebuild lists if there exist particles move larger than buffer
-    i = cuda.grid(1)
-    if i < x.shape[0]:
-        dr2 = cu_pbc_dist2(x[i], last_x[i], box)
-        if dr2 > r_buff2:
-            situation[0] = 1
+        @cuda.jit(
+            void(float[:, :], float[:, :], float[:], float, int32[:, :], int32[:], int32[:], int32[:], int32[:, :],
+                 int32[:], int32[:], int32[:]))
+        def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max, situation):
+            pi = cuda.grid(1)
+            if pi >= x.shape[0]:
+                return
+            # xi = cuda.local.array(ndim, dtype=float64)
+            # xj = cuda.local.array(ndim, dtype=float64)
+            # for l in range(ndim):
+            #    xi[l] = x[pi, l]
+            ic = cells[pi]
+            n_needed = 0
+            nn = 0
+            xi = x[pi]
+            for j in range(cell_map.shape[1]):
+                jc = cell_map[ic, j]
+                start = cell_count[jc]
+                end = cell_count[jc + 1]
+                for k in range(start, end):
+                    pj = cell_list[k]
+                    if pj == pi:
+                        continue
+                    # for m in range(ndim):
+                    # xj[m] = x[pj, m]
+                    r2 = cu_pbc_dist2(xi, x[pj], box)
+                    if r2 < r_cut2:
+                        if nn < nl.shape[1]:
+                            nl[pi, nn] = pj
+                        else:
+                            n_needed = nn + 1
+                        nn += 1
+            nc[pi] = nn
+            for k in range(x.shape[1]):
+                last_x[pi, k] = x[pi, k]
+            if nn > 0:
+                cuda.atomic.max(n_max, 0, n_needed)
+            if pi == 0:  # reset situation only once while function is called
+                situation[0] = 0
+
+        return cu_nlist
+
+    @cuda.jit(void(float[:, :], float[:], float64[:, :], float, int32[:]))
+    def cu_check_build(x, box, last_x, r_buff2, situation):
+        # rebuild lists if there exist particles move larger than buffer
+        i = cuda.grid(1)
+        if i < x.shape[0]:
+            dr2 = cu_pbc_dist2(x[i], last_x[i], box)
+            if dr2 > r_buff2:
+                situation[0] = 1
+    return _gen_nlist(), cu_check_build
 
 
 class nlist(object):
@@ -71,7 +89,8 @@ class nlist(object):
         self.tpb = 64
         self.bpg = int(self.system.N // self.tpb + 1)
         # self.situ_zero = np.zeros(1, dtype=np.int32)
-
+        global cu_nlist, cu_check_build
+        cu_nlist, cu_check_build = _gen_func(system.dtype)
         self.update_counts = 0
         with cuda.gpus[self.gpu]:
             # self.d_cells = cuda.device_array((self.system.N,), dtype=np.int32)
