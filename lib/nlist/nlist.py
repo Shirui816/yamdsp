@@ -66,17 +66,17 @@ def _gen_func(dtype, n_dim):
             jc = cell_map[ic, j]
             for k in range(cell_count[jc]):
                 xjp = cell_list[jc, k]
-                pj = int32(xi[n_dim + 1])
+                pj = xi[n_dim + 1]
                 if pj == pi:
                     continue
-                for k in range(n_dim):
-                    xj[k] = xjp[k]
+                for l in range(n_dim):
+                    xj[l] = xjp[l]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
                 r2 = cu_pbc_dist2(xi, xj, s_box)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
-                        nl[pi, nn] = pj
+                        nl[pi, nn] = int32(pj)
                     else:
                         n_needed = nn + 1
                     nn += 1
