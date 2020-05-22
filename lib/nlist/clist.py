@@ -86,7 +86,7 @@ class clist:
             self.d_cell_adj = cuda.to_device(self.cell_adj)
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
             self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim), dtype=np.int32)
-            self.d_cell_list_index = cuda.device_array((self.ncell, self.cell_guess), dtype=np.int32)
+            self.d_cell_list_index = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
             self.p_cell_max = cuda.pinned_array(1, dtype=np.int32)
             self.d_cell_max = cuda.device_array(1, dtype=np.int32)
@@ -111,6 +111,6 @@ class clist:
                     self.cell_guess = self.cell_guess + 8 - (self.cell_guess & 7)
                     self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim),
                                                          dtype=self.system.dtype)
-                    self.d_cell_list_index = cuda.device_array((self.ncell, self.cell_guess), dtype=np.int32)
+                    self.d_cell_list_index = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
                 else:
                     break
