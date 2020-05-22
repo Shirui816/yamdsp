@@ -53,10 +53,6 @@ def _gen_func(dtype, n_dim):
         # xj = cuda.local.array(ndim, dtype=float64)
         # for l in range(ndim):
         #    xi[l] = x[pi, l]
-        s_box = cuda.shared.array(n_dim, dtype=float)
-        for k in range(n_dim):
-            s_box[k] = box[k]
-        cuda.syncthreads()
         xj = cuda.local.array(n_dim, dtype=float)
         ic = cells[pi]
         n_needed = 0
@@ -73,7 +69,7 @@ def _gen_func(dtype, n_dim):
                     xj[l] = xjp[l]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, xj, s_box)
+                r2 = cu_pbc_dist2(xi, xj, box)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = int32(pj)
