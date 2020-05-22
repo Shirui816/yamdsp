@@ -5,8 +5,8 @@ import numpy as np
 from numba import cuda
 from numba import int32
 
-from lib._helpers import Ctx
-from lib.utils import cu_unravel_index_f, cu_ravel_index_f_pbc
+from .._helpers import Ctx
+from ..utils import cu_unravel_index_f, cu_ravel_index_f_pbc
 
 
 @cuda.jit("int32(float64[:], float64[:], int32[:])", device=True)

@@ -3,7 +3,7 @@ import gc
 import numpy as np
 from numba import cuda
 
-from lib._helpers import Ctx
+from ._helpers import Ctx
 
 
 class system:
@@ -20,6 +20,7 @@ class system:
         cuda.select_device(gpu)  # select gpu before everything.
         self.x = x
         self.box = box
+        self.dtype = x.dtype
         self.N = x.shape[0]
         self.n_dim = x.shape[1]
         self.gpu = gpu

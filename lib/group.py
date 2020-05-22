@@ -2,7 +2,7 @@ from functools import reduce
 
 import numpy as np
 
-from lib._helpers import Ctx
+from ._helpers import Ctx
 
 
 class group:

@@ -1,8 +1,8 @@
 import numpy as np
 from numba import cuda
 
-from lib._helpers import Ctx
-from lib.utils import cu_pbc_dist2
+from .._helpers import Ctx
+from ..utils import cu_pbc_dist2
 from .clist import clist
 
 
