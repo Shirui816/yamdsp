@@ -38,8 +38,8 @@ def _gen_func(dtype, n_dim):
             cell_j = cu_ravel_index_f_pbc(cell_vec_j, ibox)
             ret[cell_i, j] = cell_j
 
-    @cuda.jit(void(float[:, :], float[:], int32[:], float[:, :, :], int32[:, :], int32[:], int32[:], int32[:]))
-    def cu_cell_list(x, box, ibox, cell_list, cell_list_index, cell_counts, cells, cell_max):
+    @cuda.jit(void(float[:, :], float[:], int32[:], float[:, :, :], int32[:], int32[:], int32[:]))
+    def cu_cell_list(x, box, ibox, cell_list, cell_counts, cells, cell_max):
         pi = cuda.grid(1)
         if pi >= x.shape[0]:
             return
@@ -53,7 +53,8 @@ def _gen_func(dtype, n_dim):
         if index < cell_list.shape[0]:
             for k in range(n_dim):
                 cell_list[ic, index, k] = xi[k]
-            cell_list_index[ic, index] = pi
+            cell_list[ic, index, n_dim + 1] = float(pi)
+            #cell_list_index[ic, index] = pi
         else:
             cuda.atomic.max(cell_max, 0, index + 1)
 
@@ -87,7 +88,6 @@ class clist:
             cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
             self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim),
                                                  dtype=self.system.dtype)
-            self.d_cell_list_index = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
             self.d_cell_max = cuda.device_array(1, dtype=np.int32)
         self.update()
@@ -100,7 +100,6 @@ class clist:
                                                  self.system.d_box,
                                                  self.d_ibox,
                                                  self.d_cell_list,
-                                                 self.d_cell_list_index,
                                                  self.d_cell_counts,
                                                  self.d_cells,
                                                  self.d_cell_max)
@@ -109,8 +108,7 @@ class clist:
                 if self.p_cell_max[0] > self.cell_guess:
                     self.cell_guess = self.p_cell_max[0]
                     self.cell_guess = self.cell_guess + 8 - (self.cell_guess & 7)
-                    self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim),
+                    self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess, self.system.n_dim + 1),
                                                          dtype=self.system.dtype)
-                    self.d_cell_list_index = cuda.device_array((self.n_cell, self.cell_guess), dtype=np.int32)
                 else:
                     break

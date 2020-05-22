@@ -5,7 +5,7 @@ from .clist import clist
 from .._helpers import Ctx
 
 
-def _gen_func(dtype):
+def _gen_func(dtype, n_dim):
     from math import floor
     float = float64
     if dtype == np.dtype(np.float32):
@@ -42,9 +42,9 @@ def _gen_func(dtype):
         arr[i] = val
 
     @cuda.jit(
-        void(float[:, :], float[:, :], float[:], float, int32[:, :], int32[:, :], float[:, :, :], int32[:], int32[:],
+        void(float[:, :], float[:, :], float[:], float, int32[:, :], float[:, :, :], int32[:], int32[:],
              int32[:, :], int32[:], int32[:], int32[:]))
-    def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list_index, cell_list, cell_count, cells, nl, nc, n_max,
+    def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max,
                  situation):
         pi = cuda.grid(1)
         if pi >= x.shape[0]:
@@ -53,6 +53,11 @@ def _gen_func(dtype):
         # xj = cuda.local.array(ndim, dtype=float64)
         # for l in range(ndim):
         #    xi[l] = x[pi, l]
+        s_box = cuda.shared.array(n_dim, dtype=float)
+        for k in range(n_dim):
+            s_box[k] = box[k]
+        cuda.syncthreads()
+        xj = cuda.local.array(n_dim, dtype=float)
         ic = cells[pi]
         n_needed = 0
         nn = 0
@@ -60,13 +65,15 @@ def _gen_func(dtype):
         for j in range(cell_map.shape[1]):
             jc = cell_map[ic, j]
             for k in range(cell_count[jc]):
-                pj = cell_list_index[jc, k]
+                xjp = cell_list[jc, k]
+                pj = int32(xi[n_dim + 1])
                 if pj == pi:
                     continue
-                xj = cell_list[jc, k]
+                for k in range(n_dim):
+                    xj[k] = xjp[k]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, xj, box)
+                r2 = cu_pbc_dist2(xi, xj, s_box)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = pj
@@ -109,7 +116,7 @@ class nlist(object):
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         self.update_counts = 0
         global cu_max_int, cu_set_to_int, cu_nlist, cu_check_build
-        cu_max_int, cu_set_to_int, cu_nlist, cu_check_build = _gen_func(system.dtype)
+        cu_max_int, cu_set_to_int, cu_nlist, cu_check_build = _gen_func(system.dtype, system.n_dim)
         with cuda.gpus[self.gpu]:
             self.p_n_max = cuda.pinned_array((1,), dtype=np.int32)
             self.p_situation = cuda.pinned_array((1,), dtype=np.int32)
@@ -127,7 +134,7 @@ class nlist(object):
                 cu_set_to_int[self.bpg, self.tpb](self.d_nc, 0)
                 # reset situation while build nlist
                 cu_nlist[self.bpg, self.tpb](self.system.d_x, self.d_last_x, self.system.d_box, self.r_cut2,
-                                             self.clist.d_cell_map, self.clist.d_cell_list_index,
+                                             self.clist.d_cell_map,
                                              self.clist.d_cell_list,
                                              self.clist.d_cell_counts, self.clist.d_cells,
                                              self.d_nl, self.d_nc, self.d_n_max, self.d_situation)
