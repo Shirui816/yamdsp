@@ -1,7 +1,7 @@
 import numpy as np
 from numba import cuda, void, int32, float32, float64
 
-from .clist_a import clist
+from .clist_1 import clist
 from .._helpers import Ctx
 
 
@@ -54,7 +54,6 @@ def _gen_func(dtype, n_dim):
         # for l in range(ndim):
         #    xi[l] = x[pi, l]
         xj = cuda.local.array(n_dim, dtype=float)
-        boxi = box
         ic = cells[pi]
         n_needed = 0
         nn = 0
@@ -70,7 +69,7 @@ def _gen_func(dtype, n_dim):
                     xj[l] = xjp[l]
                 # for m in range(ndim):
                 # xj[m] = x[pj, m]
-                r2 = cu_pbc_dist2(xi, xj, boxi)
+                r2 = cu_pbc_dist2(xi, xj, box)
                 if r2 < r_cut2:
                     if nn < nl.shape[1]:
                         nl[pi, nn] = int32(pj)
