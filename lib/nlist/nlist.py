@@ -5,7 +5,7 @@ from .clist import clist
 from .._helpers import Ctx
 
 
-def _gen_func(dtype, n_dim):
+def _gen_func(dtype):
     from math import floor
     float = float64
     if dtype == np.dtype(np.float32):
@@ -108,7 +108,7 @@ class nlist(object):
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         self.update_counts = 0
         global cu_max_int, cu_set_to_int, cu_nlist, cu_check_build
-        cu_max_int, cu_set_to_int, cu_nlist, cu_check_build = _gen_func(system.dtype, system.n_dim)
+        cu_max_int, cu_set_to_int, cu_nlist, cu_check_build = _gen_func(system.dtype)
         with cuda.gpus[self.gpu]:
             self.p_n_max = cuda.pinned_array((1,), dtype=np.int32)
             self.p_situation = cuda.pinned_array((1,), dtype=np.int32)
