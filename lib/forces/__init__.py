@@ -44,10 +44,10 @@ class pair:
             @cuda.jit("void(float64[:,:], float64[:], int32[:], int32[:], float64[:], int32[:], int32, float64[:]")
             def _f(x, box, nl, nc, params, typeid, n_types, forces):
                 i = cuda.grid(1)
-                ti = typeid[i]
                 if i >= x.shape[0]:
                     return
                 xi = x[i]
+                ti = typeid[i]
                 for k in range(nc[i]):
                     j = nl[i, k]
                     tj = typeid[j]

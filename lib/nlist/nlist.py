@@ -5,6 +5,22 @@ from .clist import clist
 from .._helpers import Ctx
 
 
+@cuda.jit(void(int32[:], int32))
+def cu_set_to_int(arr, val):
+    i = cuda.grid(1)
+    if i >= arr.shape[0]:
+        return
+    arr[i] = val
+
+
+@cuda.jit(void(int32[:], int32[:]))
+def cu_max_int(arr, arr_max):
+    i = cuda.grid(1)
+    if i >= arr.shape[0]:
+        return
+    cuda.atomic.max(arr_max, 0, arr[i])
+
+
 def _gen_func(dtype):
     from math import floor
     float = float64
@@ -19,27 +35,6 @@ def _gen_func(dtype):
             d -= box[i] * floor(d / box[i] + 0.5)
             ret += d ** 2
         return ret
-
-    @cuda.jit(void(int32[:], int32[:]))
-    def cu_max_int(arr, arr_max):
-        i = cuda.grid(1)
-        if i >= arr.shape[0]:
-            return
-        cuda.atomic.max(arr_max, 0, arr[i])
-
-    @cuda.jit(void(int32[:], int32))
-    def cu_set_to_int(arr, val):
-        i = cuda.grid(1)
-        if i >= arr.shape[0]:
-            return
-        arr[i] = val
-
-    @cuda.jit(void(float[:], float))
-    def cu_set_to_float(arr, val):
-        i = cuda.grid(1)
-        if i >= arr.shape[0]:
-            return
-        arr[i] = val
 
     @cuda.jit(
         void(float[:, :], float[:, :], float[:], float, int32[:, :], int32[:, :], int32[:], int32[:],
@@ -89,7 +84,7 @@ def _gen_func(dtype):
             if dr2 > r_buff2:
                 situation[0] = 1
 
-    return cu_max_int, cu_set_to_int, cu_nlist, cu_check_build
+    return cu_nlist, cu_check_build
 
 
 class nlist(object):
@@ -107,8 +102,7 @@ class nlist(object):
         self.bpg = int(self.system.N // self.tpb + 1)
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         self.update_counts = 0
-        global cu_max_int, cu_set_to_int, cu_nlist, cu_check_build
-        cu_max_int, cu_set_to_int, cu_nlist, cu_check_build = _gen_func(system.dtype)
+        self.cu_nlist, self.cu_check_build = _gen_func(system.dtype)
         with cuda.gpus[self.gpu]:
             self.p_n_max = cuda.pinned_array((1,), dtype=np.int32)
             self.p_situation = cuda.pinned_array((1,), dtype=np.int32)
@@ -125,18 +119,18 @@ class nlist(object):
             while True:
                 cu_set_to_int[self.bpg, self.tpb](self.d_nc, 0)
                 # reset situation while build nlist
-                cu_nlist[self.bpg, self.tpb](self.system.d_x,
-                                             self.d_last_x,
-                                             self.system.d_box,
-                                             self.r_cut2,
-                                             self.clist.d_cell_map,
-                                             self.clist.d_cell_list,
-                                             self.clist.d_cell_counts,
-                                             self.clist.d_cells,
-                                             self.d_nl,
-                                             self.d_nc,
-                                             self.d_n_max,
-                                             self.d_situation)
+                self.cu_nlist[self.bpg, self.tpb](self.system.d_x,
+                                                  self.d_last_x,
+                                                  self.system.d_box,
+                                                  self.r_cut2,
+                                                  self.clist.d_cell_map,
+                                                  self.clist.d_cell_list,
+                                                  self.clist.d_cell_counts,
+                                                  self.clist.d_cells,
+                                                  self.d_nl,
+                                                  self.d_nc,
+                                                  self.d_n_max,
+                                                  self.d_situation)
                 self.d_n_max.copy_to_host(self.p_n_max)
                 cuda.synchronize()
                 # n_max = np.array([120])
@@ -149,8 +143,8 @@ class nlist(object):
 
     def check_update(self):
         with cuda.gpus[self.gpu]:
-            cu_check_build[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_last_x, self.r_buff2,
-                                               self.d_situation)
+            self.cu_check_build[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_last_x, self.r_buff2,
+                                                    self.d_situation)
         self.d_situation.copy_to_host(self.p_situation)
         cuda.synchronize()
         return self.p_situation
