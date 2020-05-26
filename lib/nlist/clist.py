@@ -55,7 +55,7 @@ def _gen_func(dtype, n_dim):
         else:
             cuda.atomic.max(cell_max, 0, index + 1)
 
-    return cu_cell_index, cu_cell_map, cu_cell_list
+    return cu_cell_map, cu_cell_list
 
 
 class clist:
@@ -73,8 +73,7 @@ class clist:
         self.bpg_cell = int(self.n_cell // self.tpb + 1)
         self.cell_guess = cell_guess
         # self.situ_zero = np.zeros(1, dtype=np.int32)
-        global cu_cell_index, cu_cell_map, cu_cell_list
-        cu_cell_index, cu_cell_map, cu_cell_list = _gen_func(system.dtype, system.n_dim)
+        self.cu_cell_map, self.cu_cell_list = _gen_func(system.dtype, system.n_dim)
         self.p_cell_max = cuda.pinned_array((1,), dtype=np.int32)
         with cuda.gpus[self.gpu]:
             self.d_last_x = cuda.device_array_like(self.system.d_x)
@@ -82,7 +81,7 @@ class clist:
             self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.n_dim), dtype=np.int32)
             self.d_ibox = cuda.to_device(self.ibox)
             self.d_cell_adj = cuda.to_device(self.cell_adj)
-            cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
+            self.cu_cell_map[self.bpg_cell, self.tpb](self.d_ibox, self.d_cell_adj, self.d_cell_map)
             self.d_cell_list = cuda.device_array((self.n_cell, self.cell_guess),
                                                  dtype=np.int32)
             self.d_cell_counts = cuda.device_array(self.n_cell, dtype=np.int32)
@@ -93,13 +92,13 @@ class clist:
         with cuda.gpus[self.gpu]:
             while True:
                 cu_set_to_int[self.bpg_cell, self.tpb](self.d_cell_counts, 0)
-                cu_cell_list[self.bpg, self.tpb](self.system.d_x,
-                                                 self.system.d_box,
-                                                 self.d_ibox,
-                                                 self.d_cell_list,
-                                                 self.d_cell_counts,
-                                                 self.d_cells,
-                                                 self.d_cell_max)
+                self.cu_cell_list[self.bpg, self.tpb](self.system.d_x,
+                                                      self.system.d_box,
+                                                      self.d_ibox,
+                                                      self.d_cell_list,
+                                                      self.d_cell_counts,
+                                                      self.d_cells,
+                                                      self.d_cell_max)
                 self.d_cell_max.copy_to_host(self.p_cell_max)
                 cuda.synchronize()
                 if self.p_cell_max[0] > self.cell_guess:

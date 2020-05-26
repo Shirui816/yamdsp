@@ -1,16 +1,9 @@
 import numpy as np
 from numba import cuda, void, int32, float32, float64
 
+from . import cu_set_to_int
 from .clist import clist
 from .._helpers import Ctx
-
-
-@cuda.jit(void(int32[:], int32))
-def cu_set_to_int(arr, val):
-    i = cuda.grid(1)
-    if i >= arr.shape[0]:
-        return
-    arr[i] = val
 
 
 @cuda.jit(void(int32[:], int32[:]))
