@@ -76,7 +76,6 @@ class clist:
         self.cu_cell_map, self.cu_cell_list = _gen_func(system.dtype, system.n_dim)
         self.p_cell_max = cuda.pinned_array((1,), dtype=np.int32)
         with cuda.gpus[self.gpu]:
-            self.d_last_x = cuda.device_array_like(self.system.d_x)
             self.d_cells = cuda.device_array(self.system.d_x.shape[0], dtype=np.int32)
             self.d_cell_map = cuda.device_array((self.n_cell, 3 ** system.n_dim), dtype=np.int32)
             self.d_ibox = cuda.to_device(self.ibox)
