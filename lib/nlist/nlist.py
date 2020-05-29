@@ -127,8 +127,8 @@ class nlist(object):
                 self.d_n_max.copy_to_host(self.p_n_max)
                 cuda.synchronize()
                 # n_max = np.array([120])
-                if self.d_n_max[0] > self.n_guess:
-                    self.n_guess = self.d_n_max[0]
+                if self.p_n_max[0] > self.n_guess:
+                    self.n_guess = self.p_n_max[0]
                     self.n_guess = self.n_guess + 8 - (self.n_guess & 7)
                     self.d_nl = cuda.device_array((self.system.N, self.n_guess), dtype=np.int32)
                 else:
