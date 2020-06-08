@@ -1,14 +1,14 @@
 import numpy as np
 
-from lib.system import system
+from yamdsp.system import system
 
 x = np.loadtxt('data/pos.txt').astype(np.float64)
 box = np.array([50, 50, 50.]).astype(np.float64)
 typ = np.ones(x.shape[0])
 s = system(x, box, typ)
 
-from lib.nlist.nlist_sort import nlist as nlist_sort
-from lib.nlist.nlist import nlist as nlist
+from yamdsp.nlist.nlist_sort import nlist as nlist_sort
+from yamdsp.nlist.nlist import nlist as nlist
 
 nlist_s = nlist_sort(3.0, 0.5)
 ret_s = nlist_s.show()
