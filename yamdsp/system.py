@@ -19,6 +19,7 @@ class system:
             )
         cuda.select_device(gpu)  # select gpu before everything.
         self.x = x
+        self.nlist = None
         self.box = box
         self.dtype = x.dtype
         self.N = x.shape[0]

@@ -2,7 +2,6 @@ import numpy as np
 from numba import cuda
 
 from .._helpers import Ctx
-from ..utils import cu_pbc_dist2
 
 
 class pair:
@@ -17,9 +16,11 @@ class pair:
             self.typeid = system.typeid
             assert isinstance(self.types, list)
             self.n_types = len(self.types)
+            self.nlist = system.nlist
         else:
             raise ValueError("No active system, initialize system first!")
         self.params = [[] for _ in range(int(self.n_types * self.n_types))]
+        cu_pbc_dist2 = self.nlist.dist_funcs['cu_pbc_dist2']
 
     def set_params(self, type_a, type_b, *args):
         tid_a: int = self.types.index(type_a)

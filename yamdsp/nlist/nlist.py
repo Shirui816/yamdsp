@@ -42,6 +42,7 @@ class nlist(object):
             self.d_situation = cuda.device_array(1, dtype=np.int32)
         self.clist = clist(r_cut, r_buff, cell_guess=self.cell_guess)
         self.neighbour_list()
+        self.system.nlist = self  # register to system
 
     def neighbour_list(self):
         with cuda.gpus[self.gpu]:
