@@ -72,7 +72,10 @@ class nlist(object):
 
     def check_update(self):
         with cuda.gpus[self.gpu]:
-            self.cu_check_build[self.bpg, self.tpb](self.system.d_x, self.system.d_box, self.d_last_x, self.r_buff2,
+            self.cu_check_build[self.bpg, self.tpb](self.system.d_x,
+                                                    self.system.d_box,
+                                                    self.d_last_x,
+                                                    self.r_buff2,
                                                     self.d_situation)
         self.d_situation.copy_to_host(self.p_situation)
         cuda.synchronize()
