@@ -4,18 +4,14 @@ import numpy as np
 from numba import cuda
 from numba import float64, float32, void, int32
 
-from ..system import Ctx
 
-dtype, gpu = Ctx.get_active().dtype, Ctx.get_active().gpu
-
-
-def _gen_func(dtype, gpu):
-    float = float64
+def gen_dist_func(dtype, gpu):
+    nb_float = float64
     if dtype == np.dtype(np.float32):
-        float = float32
+        nb_float = float32
     cuda.select_device(gpu)
 
-    @cuda.jit(float(float[:], float[:], float[:], float, float), device=True)
+    @cuda.jit(nb_float(nb_float[:], nb_float[:], nb_float[:], nb_float, nb_float), device=True)
     def cu_pbc_dist_diameter(a, b, box, da, db):
         ret = 0
         for i in range(a.shape[0]):
@@ -24,7 +20,7 @@ def _gen_func(dtype, gpu):
             ret += d ** 2
         return sqrt(ret) - ((da + db) / 2 - 1)
 
-    @cuda.jit(float(float[:], float[:], float[:]), device=True)
+    @cuda.jit(nb_float(nb_float[:], nb_float[:], nb_float[:]), device=True)
     def cu_pbc_dist2(a, b, box):
         ret = 0
         for i in range(a.shape[0]):
@@ -33,7 +29,7 @@ def _gen_func(dtype, gpu):
             ret += d ** 2
         return ret
 
-    @cuda.jit(float(float[:], float[:], float[:]), device=True)
+    @cuda.jit(nb_float(nb_float[:], nb_float[:], nb_float[:]), device=True)
     def cu_pbc_dist(a, b, box):
         ret = 0
         for i in range(a.shape[0]):
@@ -43,9 +39,6 @@ def _gen_func(dtype, gpu):
         return sqrt(ret)
 
     return cu_pbc_dist2, cu_pbc_dist_diameter, cu_pbc_dist
-
-
-cu_pbc_dist2, cu_pbc_dist_diameter, cu_pbc_dist = _gen_func(dtype, gpu)
 
 
 @cuda.jit(int32(int32[:], int32[:]), device=True)
@@ -67,6 +60,5 @@ def cu_unravel_index_f(i, dim, ret):  # unravel index in Fortran way.
 
 __all__ = ["cu_ravel_index_f_pbc",
            "cu_unravel_index_f",
-           "cu_pbc_dist2",
-           "cu_pbc_dist_diameter",
-           "cu_pbc_dist"]
+           "gen_func"
+           ]

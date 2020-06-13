@@ -4,6 +4,7 @@ from numba import cuda, void, int32, float32, float64
 from . import cu_set_to_int
 from .clist import clist
 from .._helpers import Ctx
+from ..utils import gen_dist_func
 
 
 @cuda.jit(void(int32[:], int32[:]))
@@ -29,6 +30,7 @@ class nlist(object):
         self.bpg = int(self.system.N // self.tpb + 1)
         # self.situ_zero = np.zeros(1, dtype=np.int32)
         self.update_counts = 0
+        self.dist_funcs = {}
         self.cu_nlist, self.cu_check_build = self._gen_func()
         with cuda.gpus[self.gpu]:
             self.p_n_max = cuda.pinned_array((1,), dtype=np.int32)
@@ -101,6 +103,11 @@ class nlist(object):
         if self.system.dtype == np.dtype(np.float32):
             nb_float = float32
 
+        cu_pbc_dist2, cu_pbc_dist_diameter, cu_pbc_dist = gen_dist_func(self.system.dtype, self.system.gpu)
+        self.dist_funcs['cu_pbc_dist2'] = cu_pbc_dist2
+        self.dist_funcs['cu_pbc_dist_diameter'] = cu_pbc_dist_diameter
+        self.dist_funcs['cu_pbc_dist'] = cu_pbc_dist
+
         @cuda.jit(nb_float(nb_float[:], nb_float[:], nb_float[:]), device=True)
         def cu_pbc_dist2(a, b, box):
             ret = 0
@@ -111,8 +118,8 @@ class nlist(object):
             return ret
 
         @cuda.jit(
-            void(nb_float[:, :], nb_float[:, :], nb_float[:], nb_float, int32[:, :], int32[:, :], int32[:], int32[:],
-                 int32[:, :], int32[:], int32[:], int32[:]))
+            void(nb_float[:, :], nb_float[:, :], nb_float[:], nb_float, int32[:, :],
+                 int32[:, :], int32[:], int32[:], int32[:, :], int32[:], int32[:], int32[:]))
         def cu_nlist(x, last_x, box, r_cut2, cell_map, cell_list, cell_count, cells, nl, nc, n_max,
                      situation):
             pi = cuda.grid(1)
